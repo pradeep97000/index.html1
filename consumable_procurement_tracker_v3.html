@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consumable & Procurement Tracker</title>
+<style>
+:root{--navy:#172b4d;--blue:#2563eb;--bg:#f4f7fb;--line:#e3e9f2;--muted:#64748b;--green:#15803d;--red:#b91c1c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif;color:#182230}
+header{background:linear-gradient(115deg,#142847,#2457a6);color:white;padding:24px 28px}
+header h1{margin:0 0 5px;font-size:24px}header p{margin:0;color:#dbeafe}
+.shell{display:flex;min-height:calc(100vh - 90px)}aside{width:220px;background:#fff;border-right:1px solid var(--line);padding:18px 12px}
+nav button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:12px;border-radius:8px;margin:3px 0;color:#334155;font-weight:600;cursor:pointer}
+nav button.active,nav button:hover{background:#eaf1ff;color:#1d4ed8}
+main{padding:24px;width:calc(100% - 220px);max-width:1500px;margin:auto}
+.page{display:none}.page.active{display:block}.heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.heading h2{margin:0;font-size:21px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.card,.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:17px;box-shadow:0 2px 7px #1e293b08}
+.metric{font-size:26px;font-weight:750;margin-top:7px}.muted{color:var(--muted)}.small{font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel h3{margin:0 0 14px;font-size:16px}
+form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}
+label{font-size:12px;font-weight:700;color:#475569}input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:7px;background:white;font:inherit;color:#172033}textarea{min-height:72px;resize:vertical}
+button.primary,.btn{border:0;border-radius:7px;padding:10px 14px;background:var(--blue);color:white;font-weight:700;cursor:pointer}
+button.secondary{border:1px solid #cbd5e1;background:white;color:#334155;border-radius:7px;padding:9px 12px;cursor:pointer}
+button.danger{background:#fee2e2;color:#991b1b;border:0;border-radius:6px;padding:6px 9px;cursor:pointer}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;background:#f8fafc}td{font-size:13px}
+.pill{display:inline-block;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:700}.ok{background:#dcfce7;color:#166534}.low{background:#fee2e2;color:#991b1b}.pending{background:#fef3c7;color:#92400e}
+.notice{padding:11px 13px;border-radius:8px;background:#fff7ed;color:#9a3412;margin-bottom:12px;border:1px solid #fed7aa}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar input,.toolbar select{max-width:210px}
+.empty{padding:22px;text-align:center;color:#94a3b8}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.shell{display:block}aside{width:100%;padding:8px;border-right:0;border-bottom:1px solid var(--line)}nav{display:flex;overflow:auto}nav button{white-space:nowrap;width:auto}main{width:100%;padding:15px}}
+@media(max-width:520px){.cards{grid-template-columns:1fr 1fr}form{grid-template-columns:1fr}.field.full{grid-column:auto}header{padding:18px}.metric{font-size:21px}}
+.auth{position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(115deg,#142847,#2457a6);overflow:auto}
+.authcard{background:#fff;border-radius:14px;padding:26px;width:100%;max-width:420px;box-shadow:0 10px 40px #0004}.authcard h2{margin:0 0 4px}.auth form{grid-template-columns:1fr}
+.tabs{display:flex;gap:6px;margin:14px 0}.tabs button{flex:1;padding:9px;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-weight:700;cursor:pointer}.tabs button.on{background:#eaf1ff;color:#1d4ed8;border-color:#93b4f5}
+.amsg{margin-top:10px;font-size:13px;font-weight:600}.amsg.bad{color:var(--red)}.amsg.good{color:var(--green)}
+body.locked header,body.locked .shell{display:none}body:not(.is-admin) .adminonly{display:none!important}
+.userbar{float:right;display:flex;gap:10px;align-items:center;font-size:13px}
+.printhead{display:none}.noprint{}
+.rep .rhead{display:flex;justify-content:space-between;gap:16px;border-bottom:3px solid var(--navy);padding-bottom:10px;margin-bottom:14px}.rep .rhead h1{margin:0;font-size:22px;color:var(--navy)}.rep .rmeta{text-align:right;font-size:12px;color:#475569}
+.rep h3{margin:20px 0 8px;font-size:14px;color:var(--navy);border-left:4px solid var(--blue);padding-left:8px}.rep table{min-width:0}.rep td.n,.rep th.n{text-align:right}.rep tfoot td{font-weight:700;background:#f1f5f9}
+.sigs{display:flex;gap:30px;margin-top:48px}.sig{flex:1;text-align:center}.sig .sp{height:46px;border-bottom:1px solid #334155;margin-bottom:6px}
+body:not(.is-admin):not(.is-sup) .staffonly{display:none!important}
+@page{size:A4;margin:14mm}
+@media print{header,aside,.toolbar,.heading button,.userbar,.auth,.noprint,button,form,.notice{display:none!important}body{background:#fff;font-size:12px}.shell{display:block}main{width:100%;padding:0}.panel,.card{box-shadow:none;border-radius:0}#reportOutput{border:0;padding:0}.printhead{display:block;padding-bottom:6px;border-bottom:1px solid #999;margin-bottom:10px;font-size:11px}
+.rep th{background:#e2e8f0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep h3,.sigs{page-break-inside:avoid;break-inside:avoid}.rep tr{page-break-inside:avoid}.cards{grid-template-columns:repeat(4,1fr)}}
+</style></head>
+<body class="locked">
+<div class="auth" id="loginOverlay"><div class="authcard"><h2>Consumable & Procurement Tracker</h2><span class="muted">Login to continue</span>
+<div class="tabs"><button id="tabL" class="on" onclick="authTab('l')">Login</button><button id="tabR" onclick="authTab('r')">Request Access</button></div>
+<div id="loginBox"><form id="loginForm"><div class="field"><label>Username</label><input id="lUser" required autocomplete="username"></div><div class="field"><label>Password</label><input id="lPass" type="password" required autocomplete="current-password"></div><button class="primary">Login</button></form></div>
+<div id="regBox" style="display:none"><form id="regForm"><div class="field"><label>Full name *</label><input id="gName" required></div><div class="field"><label>Department *</label><input id="gDept" required></div><div class="field"><label>Phone / Email *</label><input id="gContact" required></div><div class="field"><label>Choose username *</label><input id="gUser" required placeholder="letters, numbers, . or _"></div><div class="field"><label>Password * (min 6)</label><input id="gPass" type="password" required></div><div class="field"><label>Confirm password *</label><input id="gPass2" type="password" required></div><p class="small muted">Admin will approve your request and give you an access level.</p><button class="primary">Send request to Admin</button></form></div>
+<div id="authMsg" class="amsg"></div></div></div>
+<header><div class="userbar" id="userbar"></div><h1>Consumable & Procurement Tracker</h1><p>Inventory control • Purchase records • Department requests • Monthly reporting</p></header>
+<div class="printhead" id="printhead"></div>
+<div class="shell"><aside><nav>
+<button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button>
+<button data-page="request">＋ &nbsp; Item Request</button>
+<button data-page="purchase">＋ &nbsp; Purchase Entry</button>
+<button data-page="stock">▤ &nbsp; Stock Register</button>
+<button data-page="reports">▥ &nbsp; Reports</button>
+<button data-page="users" class="adminonly">👥 &nbsp; User Management<span id="pendCount"></span></button>
+<button data-page="audit" class="staffonly">☰ &nbsp; Audit Log</button>
+<button data-page="settings" class="adminonly">⚙ &nbsp; Settings & Backup</button>
+</nav></aside>
+<main>
+<section id="dashboard" class="page active">
+<div class="heading"><div><h2>Dashboard</h2><span class="muted">Live overview of consumables and purchasing</span></div><span class="small muted" id="today"></span></div>
+<div class="cards">
+<div class="card"><div class="muted">Items tracked</div><div class="metric" id="mItems">0</div></div>
+<div class="card"><div class="muted">Total stock units</div><div class="metric" id="mUnits">0</div></div>
+<div class="card"><div class="muted">Low / out of stock</div><div class="metric" id="mLow">0</div></div>
+<div class="card"><div class="muted">Purchases this month (incl. VAT)</div><div class="metric" id="mSpend">NPR 0</div></div>
+</div>
+<div id="alerts"></div>
+<div class="grid2"><div class="panel"><h3>Low-stock alerts</h3><div id="lowTable"></div></div><div class="panel"><h3>Recent activity</h3><div id="recent"></div></div></div>
+</section>
+<section id="request" class="page">
+<div class="heading"><div><h2>Department Item Request / Issue</h2><span class="muted">Record what was requested and track fulfilment</span></div><button class="secondary" onclick="window.print()">Print</button></div>
+<div class="panel"><form id="requestForm">
+<div class="field"><label>Request date *</label><input type="date" id="rDate" required></div>
+<div class="field"><label>Requested person name *</label><input id="rPerson" required placeholder="Full name"></div>
+<div class="field"><label>Department *</label><input id="rDept" required placeholder="e.g. Administration"></div>
+<div class="field"><label>Item *</label><input id="rItem" list="itemOptions" required placeholder="Select or type item"><datalist id="itemOptions"></datalist></div>
+<div class="field"><label>Model / specification</label><input id="rModel" placeholder="Brand, model or specification"></div>
+<div class="field"><label>Requested quantity *</label><input id="rQty" type="number" min="1" step="1" required></div>
+<div class="field full"><label>Purpose / reason *</label><textarea id="rPurpose" required placeholder="Why is the item required?"></textarea></div>
+<div class="field staffonly"><label>Request status</label><select id="rStatus"><option>Pending</option><option>Approved</option></select></div>
+<div class="field"><label>Remarks</label><input id="rRemarks" placeholder="Optional"></div>
+<div class="field full"><button class="primary">Save Request</button></div>
+</form></div>
+<div class="panel" style="margin-top:16px"><h3>Request register</h3><div class="tablewrap" id="requestTable"></div></div>
+</section>
+<section id="purchase" class="page">
+<div class="heading"><div><h2>Purchase / Stock-In Entry</h2><span class="muted">Record supplier invoice and quantities received</span></div><button class="secondary" onclick="window.print()">Print</button></div>
+<div class="panel"><form id="purchaseForm">
+<div class="field"><label>Purchase date *</label><input type="date" id="pDate" required></div>
+<div class="field"><label>Supplier name *</label><input id="pSupplier" required></div>
+<div class="field"><label>Invoice number *</label><input id="pInvoice" required></div>
+<div class="field"><label>Item name *</label><input id="pItem" required placeholder="e.g. A4 paper"></div>
+<div class="field"><label>Category *</label><select id="pCategory" required><option value="">Select category</option><option>Stationery</option><option>Cleaning & Hygiene</option><option>IT & Electronics</option><option>Electrical</option><option>Pantry</option><option>Maintenance</option><option>Printing</option><option>Other</option></select></div>
+<div class="field"><label>Quantity received *</label><input id="pQty" type="number" min="0.01" step="0.01" required></div>
+<div class="field"><label>Unit price (NPR, excl. VAT) *</label><input id="pPrice" type="number" min="0" step="0.01" required></div>
+<div class="field"><label>VAT rate (%)</label><input id="pVatRate" type="number" min="0" step="0.01" value="13"></div>
+<div class="field"><label>Amount without VAT (NPR)</label><input id="pNet" readonly></div>
+<div class="field"><label>VAT amount (NPR)</label><input id="pVat" readonly></div>
+<div class="field"><label>Total amount incl. VAT (NPR)</label><input id="pTotal" readonly></div>
+<div class="field"><label>Minimum stock level *</label><input id="pMin" type="number" min="0" step="0.01" value="5" required></div>
+<div class="field"><label>Received / checked by</label><input id="pReceiver" placeholder="Staff name"></div>
+<div class="field"><label>Storage location</label><input id="pLocation" placeholder="Store room / cabinet"></div>
+<div class="field full"><label>Remarks</label><textarea id="pRemarks" placeholder="Batch, expiry date, quality check, etc."></textarea></div>
+<div class="field full"><button class="primary">Save Purchase & Update Stock</button></div>
+</form><p class="small muted">Entries are saved as "Unchecked" until a supervisor verifies them. Amounts are calculated automatically. Unit price is entered excluding VAT; VAT defaults to 13% and can be changed to match the invoice.</p></div>
+<div class="panel" style="margin-top:16px"><h3>Purchase register</h3><div class="tablewrap" id="purchaseTable"></div></div>
+</section>
+<section id="stock" class="page">
+<div class="heading"><div><h2>Stock Register</h2><span class="muted">Available balance, reorder level and stock value</span></div><span class="actions"><button class="secondary" onclick="window.print()">Print</button><button class="secondary" onclick="exportCSV('stock')">Export CSV</button></span></div>
+<div class="toolbar"><input id="stockSearch" placeholder="Search item / category"><select id="stockFilter"><option value="all">All stock</option><option value="low">Low stock only</option><option value="ok">Healthy stock only</option></select></div>
+<div class="panel"><div class="tablewrap" id="stockTable"></div></div>
+</section>
+<section id="reports" class="page">
+<div class="heading"><div><h2>Monthly Reports</h2><span class="muted">Choose a month and generate a manager-ready summary</span></div></div>
+<div class="toolbar"><input type="month" id="reportMonth"><button class="primary" onclick="renderReport()">Generate Report</button><button class="secondary" onclick="window.print()">Print / Save PDF</button><button class="secondary" onclick="exportCSV('monthly')">Export CSV</button></div>
+<div id="reportOutput" class="panel"><div class="empty">Select a month and click Generate Report.</div></div>
+</section>
+<section id="settings" class="page adminonly">
+<div class="heading"><div><h2>Settings & Backup</h2><span class="muted">Keep a safe copy of your records</span></div></div>
+<div class="panel"><h3>Organization name (printed on reports)</h3><div class="actions"><input id="orgName" style="max-width:360px" placeholder="Organization name"><button class="primary" onclick="saveOrg()">Save</button></div></div><div class="panel" style="margin-top:16px"><h3>Data backup</h3><p>All entries are saved in this browser on this device. Export a backup regularly. To use this tracker on another computer, import the backup there.</p><div class="actions"><button class="primary" onclick="backup()">Download Full Backup (JSON)</button><label class="secondary" style="cursor:pointer">Import Backup <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="restore(event)"></label><button class="secondary" onclick="exportCSV('purchases')">Export Purchases CSV</button><button class="secondary" onclick="exportCSV('requests')">Export Requests CSV</button></div><p class="small muted">Important: this is a browser-based prototype. Data is not automatically shared with your supervisor or other users. For a multi-user production system, add secure login, a central database, role permissions and scheduled cloud backups.</p></div>
+<div class="panel" style="margin-top:16px"><h3>Recommended controls</h3><ul><li>Unique invoice number checking to reduce duplicate purchase entries.</li><li>Approval before issue for higher-value or restricted items.</li><li>Expiry / batch tracking for items with shelf life.</li><li>Department-wise monthly consumption and purchase analysis.</li><li>Audit trail recording who entered, approved and issued each transaction.</li><li>Physical stock verification and adjustment records.</li></ul></div>
+</section>
+<section id="users" class="page adminonly">
+<div class="heading"><div><h2>User Management</h2><span class="muted">Approve access requests and manage users. Only admin can see this page.</span></div></div>
+<div class="panel"><h3>Pending requests</h3><div class="tablewrap" id="pendTable"></div></div>
+<div class="panel" style="margin-top:16px"><h3>All users</h3><div class="tablewrap" id="userTable"></div></div>
+</section>
+<section id="audit" class="page staffonly"><div class="heading"><div><h2>Audit Log</h2><span class="muted">Who entered, checked, issued or deleted what (latest 200)</span></div></div><div class="panel"><div class="tablewrap" id="auditTable"></div></div></section>
+</main></div>
+<script>
+const KEY='consumable_tracker_v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"purchases":[],"requests":[],"stock":{}}');
+const $=id=>document.getElementById(id), money=n=>'NPR '+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}), today=()=>new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function key(s){return String(s||'').trim().toLowerCase()}
+function available(name){return db.stock[key(name)]?.balance||0}
+function updateItemOptions(){let names=Object.values(db.stock).map(x=>x.name);$('itemOptions').innerHTML=[...new Set(names)].map(n=>`<option value="${esc(n)}">`).join('')}
+function calc(){let net=(+$('pQty').value||0)*(+$('pPrice').value||0),vat=net*(+$('pVatRate').value||0)/100;$('pNet').value=net.toFixed(2);$('pVat').value=vat.toFixed(2);$('pTotal').value=(net+vat).toFixed(2)}
+['pQty','pPrice','pVatRate'].forEach(id=>$(id).addEventListener('input',calc));
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.page).classList.add('active')});
+$('requestForm').onsubmit=e=>{e.preventDefault();db.requests.unshift({id:Date.now(),by:me.username,byName:me.name,check:'Unchecked',date:$('rDate').value,person:$('rPerson').value,dept:$('rDept').value,item:$('rItem').value.trim(),model:$('rModel').value,qty:+$('rQty').value,purpose:$('rPurpose').value,status:isStaff()?$('rStatus').value:'Pending',remarks:$('rRemarks').value});log('Request entered',$('rItem').value+' x '+$('rQty').value);save();e.target.reset();$('rDate').value=today()};
+$('purchaseForm').onsubmit=e=>{e.preventDefault();let invoice=$('pInvoice').value.trim();if(db.purchases.some(p=>key(p.supplier)===key($('pSupplier').value)&&key(p.invoice)===key(invoice))){alert('This supplier invoice number is already recorded. Please verify before saving.');return}
+let name=$('pItem').value.trim(),k=key(name),qty=+$('pQty').value,net=+$('pNet').value,vat=+$('pVat').value;let item=db.stock[k]||{name,balance:0,min:0,category:$('pCategory').value,location:''};item.name=name;item.balance+=qty;item.min=+$('pMin').value;item.category=$('pCategory').value;item.location=$('pLocation').value||item.location;item.lastPrice=+$('pPrice').value;db.stock[k]=item;
+db.purchases.unshift({id:Date.now(),by:me.username,byName:me.name,check:'Unchecked',date:$('pDate').value,supplier:$('pSupplier').value,invoice,item:name,category:$('pCategory').value,qty,unitPrice:+$('pPrice').value,net,vatRate:+$('pVatRate').value,vat,total:net+vat,receiver:$('pReceiver').value,remarks:$('pRemarks').value});log('Purchase entered',name+' qty '+qty+' inv '+invoice);save();e.target.reset();$('pDate').value=today();$('pVatRate').value=13;$('pMin').value=5;calc();alert('Purchase saved and stock balance updated.')};
+function issue(id){if(!isStaff())return;let r=db.requests.find(x=>x.id===id);if(!r)return;if(available(r.item)<r.qty){alert(`Insufficient stock. Available: ${available(r.item)} ${r.item}`);return}if(!confirm(`Issue ${r.qty} ${r.item} to ${r.person}? This will reduce stock.`))return;db.stock[key(r.item)].balance-=r.qty;r.status='Issued';r.issuedDate=today();r.issuedBy=me.username;log('Issued',r.item+' x '+r.qty+' to '+r.person);save()}
+function setStatus(id,status){if(!isStaff())return;let r=db.requests.find(x=>x.id===id);if(r){r.status=status;log(status+' request',r.item+' x '+r.qty);save()}}
+const chk=x=>`<span class="pill ${x.check==='Verified'?'ok':x.check==='Flagged'?'low':'pending'}">${x.check||'Unchecked'}</span>${x.checkNote?'<br><span class="small muted">'+esc(x.checkNote)+'</span>':''}${x.checkedBy?'<br><span class="small muted">by '+esc(x.checkedBy)+'</span>':''}`;
+const chkBtns=(t,x)=>isStaff()?`<div class="actions"><button class="secondary" onclick="checkEntry('${t}',${x.id},'Verified')">Verify</button><button class="secondary" onclick="checkEntry('${t}',${x.id},'Flagged')">Flag</button><button class="danger" onclick="delEntry('${t}',${x.id})">Delete</button></div>`:'';
+function renderRequests(){$('requestTable').innerHTML=db.requests.length?`<table><thead><tr><th>Date / Person</th><th>Department</th><th>Item / Model</th><th>Qty</th><th>Purpose</th><th>Status</th><th>Entry check</th><th class="noprint">Action</th></tr></thead><tbody>${db.requests.map(r=>`<tr><td>${esc(r.date)}<br><b>${esc(r.person)}</b><br><span class="small muted">entered by ${esc(r.byName||'-')}</span></td><td>${esc(r.dept)}</td><td>${esc(r.item)}<br>${esc(r.model)}</td><td>${r.qty}</td><td>${esc(r.purpose)}</td><td><span class="pill ${r.status==='Pending'?'pending':'ok'}">${esc(r.status)}</span></td><td>${chk(r)}</td><td class="noprint">${isStaff()?`<div class="actions">${r.status!=='Issued'?`<button class="secondary" onclick="setStatus(${r.id},'Approved')">Approve</button><button class="primary" onclick="issue(${r.id})">Issue</button>`:''}</div>${chkBtns('requests',r)}`:'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No requests recorded yet.</div>'}
+function renderPurchases(){$('purchaseTable').innerHTML=db.purchases.length?`<table><thead><tr><th>Date</th><th>Supplier / Invoice</th><th>Item / Category</th><th>Qty</th><th>Unit price</th><th>Excl. VAT</th><th>VAT</th><th>Total</th><th>Entry check</th><th class="noprint">Action</th></tr></thead><tbody>${db.purchases.map(p=>`<tr><td>${esc(p.date)}<br><span class="small muted">by ${esc(p.byName||'-')}</span></td><td>${esc(p.supplier)}<br>${esc(p.invoice)}</td><td>${esc(p.item)}<br>${esc(p.category)}</td><td>${p.qty}</td><td>${money(p.unitPrice)}</td><td>${money(p.net)}</td><td>${money(p.vat)}</td><td><b>${money(p.total)}</b></td><td>${chk(p)}</td><td class="noprint">${chkBtns('purchases',p)||'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No purchases recorded yet.</div>'}
+function lowItems(){return Object.values(db.stock).filter(x=>x.balance<=x.min)}
+function renderStock(){let q=key($('stockSearch').value),f=$('stockFilter').value;let arr=Object.values(db.stock).filter(x=>(!q||key(x.name+' '+x.category).includes(q))&&(f==='all'||(f==='low'?x.balance<=x.min:x.balance>x.min)));$('stockTable').innerHTML=arr.length?`<table><thead><tr><th>Item</th><th>Category</th><th>Available</th><th>Minimum level</th><th>Unit price</th><th>Est. stock value</th><th>Location</th><th>Status</th></tr></thead><tbody>${arr.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${esc(x.category)}</td><td>${x.balance}</td><td>${x.min}</td><td>${money(x.lastPrice||0)}</td><td>${money(x.balance*(x.lastPrice||0))}</td><td>${esc(x.location)}</td><td><span class="pill ${x.balance<=x.min?'low':'ok'}">${x.balance<=x.min?'Reorder':'Healthy'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">No matching stock items.</div>'}
+$('stockSearch').oninput=renderStock;$('stockFilter').onchange=renderStock;
+function renderDashboard(){let month=today().slice(0,7),spend=db.purchases.filter(p=>p.date.startsWith(month)).reduce((s,p)=>s+p.total,0),units=Object.values(db.stock).reduce((s,x)=>s+x.balance,0),low=lowItems();$('mItems').textContent=Object.keys(db.stock).length;$('mUnits').textContent=units.toLocaleString();$('mLow').textContent=low.length;$('mSpend').textContent=money(spend);$('today').textContent=new Date().toLocaleDateString();$('alerts').innerHTML=low.length?`<div class="notice"><b>Attention:</b> ${low.length} item(s) are at or below their minimum stock level. Please review the reorder list.</div>`:'';$('lowTable').innerHTML=low.length?`<table><thead><tr><th>Item</th><th>Balance</th><th>Minimum</th></tr></thead><tbody>${low.map(x=>`<tr><td>${esc(x.name)}</td><td><span class="pill low">${x.balance}</span></td><td>${x.min}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">All tracked items are above minimum level.</div>';$('recent').innerHTML=[...db.purchases.slice(0,4).map(p=>({date:p.date,label:'Purchase: '+p.item,detail:p.qty+' units · '+money(p.total)})),...db.requests.slice(0,4).map(r=>({date:r.date,label:'Request: '+r.item,detail:r.person+' · '+r.status}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7).map(x=>`<p><b>${esc(x.label)}</b><br><span class="muted small">${esc(x.date)} · ${esc(x.detail)}</span></p>`).join('')||'<div class="empty">No activity yet.</div>'}
+function renderReport(){let m=$('reportMonth').value;if(!m){alert('Please select a month.');return}
+const ps=db.purchases.filter(p=>p.date.startsWith(m)).slice().reverse(),rs=db.requests.filter(r=>r.date.startsWith(m)).slice().reverse(),sum=(a,f)=>a.reduce((s,x)=>s+f(x),0),num=n=>Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const total=sum(ps,p=>p.total),net=sum(ps,p=>p.net),vat=sum(ps,p=>p.vat),issued=rs.filter(r=>r.status==='Issued'),dept={};issued.forEach(r=>dept[r.dept]=(dept[r.dept]||0)+r.qty);
+const label=new Date(m+'-01').toLocaleDateString('en-GB',{month:'long',year:'numeric'}),st=Object.values(db.stock),sv=sum(st,x=>x.balance*(x.lastPrice||0)),all=[...ps,...rs],cnt=c=>all.filter(x=>(x.check||'Unchecked')===c).length;
+const tag=x=>x.check||'Unchecked',sig=t=>`<div class="sig"><div class="sp"></div><b>${t}</b><div class="small muted">Name / Signature / Date</div></div>`;
+$('reportOutput').innerHTML=`<div class="rep"><div class="rhead"><div><h1>${esc(org())}</h1><div><b>Consumables &amp; Procurement Monthly Report</b></div></div><div class="rmeta">Report period: <b>${label}</b><br>Report no: RPT-${m.replace('-','')}<br>Generated: ${new Date().toLocaleString()}<br>Prepared by: ${esc(me?me.name:'')}</div></div>
+<div class="cards"><div class="card"><div class="muted">Purchase total (incl. VAT)</div><div class="metric">${money(total)}</div></div><div class="card"><div class="muted">Amount excl. VAT</div><div class="metric">${money(net)}</div></div><div class="card"><div class="muted">VAT amount</div><div class="metric">${money(vat)}</div></div><div class="card"><div class="muted">Requests / Issued</div><div class="metric">${rs.length} / ${issued.length}</div></div></div>
+<h3>1. Purchase summary</h3>${ps.length?`<table><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Item</th><th class="n">Qty</th><th class="n">Excl. VAT</th><th class="n">VAT</th><th class="n">Total</th><th>Check</th></tr></thead><tbody>${ps.map(p=>`<tr><td>${esc(p.date)}</td><td>${esc(p.supplier)}</td><td>${esc(p.invoice)}</td><td>${esc(p.item)}</td><td class="n">${p.qty}</td><td class="n">${num(p.net)}</td><td class="n">${num(p.vat)}</td><td class="n">${num(p.total)}</td><td>${tag(p)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">Total (NPR)</td><td class="n">${num(net)}</td><td class="n">${num(vat)}</td><td class="n">${num(total)}</td><td></td></tr></tfoot></table>`:'<p class="muted">No purchases in this month.</p>'}
+<h3>2. Department requests</h3>${rs.length?`<table><thead><tr><th>Date</th><th>Person</th><th>Department</th><th>Item</th><th class="n">Qty</th><th>Status</th><th>Check</th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.person)}</td><td>${esc(r.dept)}</td><td>${esc(r.item)}</td><td class="n">${r.qty}</td><td>${esc(r.status)}</td><td>${tag(r)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">No requests in this month.</p>'}
+<h3>3. Department-wise issued quantity</h3>${Object.keys(dept).length?`<table><thead><tr><th>Department</th><th class="n">Units issued</th></tr></thead><tbody>${Object.entries(dept).map(([d,n])=>`<tr><td>${esc(d)}</td><td class="n">${n}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">No items issued in this month.</p>'}
+<h3>4. Current stock position</h3>${st.length?`<table><thead><tr><th>Item</th><th>Category</th><th class="n">Available</th><th class="n">Minimum</th><th class="n">Est. value</th><th>Status</th></tr></thead><tbody>${st.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.category)}</td><td class="n">${x.balance}</td><td class="n">${x.min}</td><td class="n">${num(x.balance*(x.lastPrice||0))}</td><td>${x.balance<=x.min?'Reorder':'Healthy'}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="4">Total estimated stock value (NPR)</td><td class="n">${num(sv)}</td><td></td></tr></tfoot></table>`:'<p class="muted">No stock items.</p>'}
+<h3>5. Data verification status</h3><p>Entries this month: <b>${all.length}</b> &middot; Verified: <b>${cnt('Verified')}</b> &middot; Flagged for correction: <b>${cnt('Flagged')}</b> &middot; Not yet checked: <b>${cnt('Unchecked')}</b></p>
+<div class="sigs">${sig('Prepared by')}${sig('Checked by (Supervisor)')}${sig('Approved by (Admin)')}</div></div>`}
+function renderAll(){updateItemOptions();renderDashboard();renderRequests();renderPurchases();renderStock();renderChecks();renderAudit()}
+function csv(rows,name){let content=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');let a=document.createElement('a'),url=URL.createObjectURL(new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8;'}));a.href=url;a.download=name+'.csv';a.click();URL.revokeObjectURL(url)}
+function exportCSV(type){if(type==='stock')csv([['Item','Category','Balance','Minimum','Last unit price','Location'],...Object.values(db.stock).map(x=>[x.name,x.category,x.balance,x.min,x.lastPrice,x.location])],'stock-register');if(type==='purchases'||type==='monthly'){let m=$('reportMonth').value,arr=type==='monthly'?db.purchases.filter(p=>p.date.startsWith(m)):db.purchases;csv([['Date','Supplier','Invoice','Item','Category','Quantity','Unit price excl VAT','Amount excl VAT','VAT rate','VAT amount','Total incl VAT'],...arr.map(p=>[p.date,p.supplier,p.invoice,p.item,p.category,p.qty,p.unitPrice,p.net,p.vatRate,p.vat,p.total])],type==='monthly'?'purchases-'+m:'purchase-register')}if(type==='requests')csv([['Date','Person','Department','Item','Model','Quantity','Purpose','Status'],...db.requests.map(r=>[r.date,r.person,r.dept,r.item,r.model,r.qty,r.purpose,r.status])],'request-register')}
+function backup(){if(!isAdmin())return;let a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.href=url;a.download='consumable-tracker-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url)}
+function restore(e){if(!isAdmin())return;let file=e.target.files[0];if(!file)return;let reader=new FileReader();reader.onload=()=>{try{let x=JSON.parse(reader.result);if(!x.stock||!x.purchases||!x.requests)throw Error();if(confirm('Replace the current records with this backup?')){db=x;save();alert('Backup imported.')}}catch(err){alert('Invalid backup file.')}};reader.readAsText(file)}
+
+const UK='consumable_tracker_users_v1',SK='consumable_tracker_session';
+let users=null,me=null;const isAdmin=()=>!!me&&me.role==='admin';
+async function hash(p){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ctp::'+p));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=5381;for(const c of 'ctp::'+p)h=((h*33)^c.charCodeAt(0))>>>0;return 'x'+h.toString(16)}}
+function loadUsers(){try{users=JSON.parse(localStorage.getItem(UK)||'null')}catch(e){users=null}}
+function saveUsers(){localStorage.setItem(UK,JSON.stringify(users))}
+async function initUsers(){loadUsers();if(!users||!users.length){users=[{username:'admin',name:'Administrator',role:'admin',status:'approved',pass:await hash('Admin@123'),created:today()}];saveUsers()}
+let s=null;try{s=sessionStorage.getItem(SK)}catch(e){}const u=s&&users.find(x=>x.username===s&&x.status==='approved');if(u)enter(u)}
+function authTab(t){$('loginBox').style.display=t==='l'?'block':'none';$('regBox').style.display=t==='r'?'block':'none';$('tabL').className=t==='l'?'on':'';$('tabR').className=t==='r'?'on':'';$('authMsg').textContent=''}
+function authMsg(m,ok){const e=$('authMsg');e.textContent=m;e.className='amsg '+(ok?'good':'bad')}
+$('loginForm').onsubmit=async e=>{e.preventDefault();loadUsers();const un=$('lUser').value.trim().toLowerCase(),u=users.find(x=>x.username===un);
+if(!u||u.pass!==await hash($('lPass').value))return authMsg('Wrong username or password.');
+if(u.status==='pending')return authMsg('Your request is still waiting for admin approval.');
+if(u.status!=='approved')return authMsg('Your access was rejected / blocked. Please contact the admin.');
+e.target.reset();enter(u)};
+$('regForm').onsubmit=async e=>{e.preventDefault();loadUsers();const un=$('gUser').value.trim().toLowerCase();
+if(!/^[a-z0-9_.]{3,20}$/.test(un))return authMsg('Username: 3-20 letters, numbers, . or _ only.');
+if(users.some(x=>x.username===un))return authMsg('This username is already taken.');
+if($('gPass').value.length<6)return authMsg('Password must be at least 6 characters.');
+if($('gPass').value!==$('gPass2').value)return authMsg('Passwords do not match.');
+users.push({username:un,name:$('gName').value.trim(),dept:$('gDept').value.trim(),contact:$('gContact').value.trim(),role:'user',status:'pending',pass:await hash($('gPass').value),created:today()});
+saveUsers();e.target.reset();authTab('l');authMsg('Request sent to admin. You can login after approval.',1)};
+function showPage(p){document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p))}
+function enter(u){me=u;try{sessionStorage.setItem(SK,u.username)}catch(e){}
+document.body.classList.remove('locked');document.body.classList.toggle('is-admin',u.role==='admin');document.body.classList.toggle('is-sup',u.role==='supervisor');$('loginOverlay').style.display='none';
+$('userbar').innerHTML=`<span>${esc(u.name)} <span class="pill ${u.role==='admin'?'pending':'ok'}">${u.role}</span></span><button class="secondary" onclick="logout()">Logout</button>`;
+$('orgName').value=org();showPage('dashboard');renderAll();renderUsers()}
+function logout(){me=null;try{sessionStorage.removeItem(SK)}catch(e){}document.body.classList.add('locked');document.body.classList.remove('is-admin','is-sup');$('loginOverlay').style.display='flex';authTab('l')}
+
+const isStaff=()=>!!me&&(me.role==='admin'||me.role==='supervisor'),org=()=>(db.settings&&db.settings.org)||'Your Organization';
+db.purchases.forEach(p=>{if(p.item&&typeof p.item==='object')p.item=p.item.name});
+function log(a,d){db.audit=db.audit||[];db.audit.unshift({t:new Date().toLocaleString(),u:me?me.username:'',a,d});db.audit=db.audit.slice(0,500)}
+function saveOrg(){if(!isAdmin())return;db.settings=db.settings||{};db.settings.org=$('orgName').value.trim();log('Organization name set',db.settings.org);save();alert('Saved.')}
+function checkEntry(t,id,s){if(!isStaff())return;const x=db[t].find(y=>y.id===id);if(!x)return;let note='';if(s==='Flagged'){note=prompt('What is wrong with this entry?');if(!note)return}
+x.check=s;x.checkNote=note;x.checkedBy=me.username;x.checkedAt=today();log(s+' '+t.slice(0,-1),x.item+' qty '+x.qty+(note?' - '+note:''));save()}
+function delEntry(t,id){if(!isStaff())return;const x=db[t].find(y=>y.id===id);if(!x)return;const why=prompt('Reason for deleting this entry (required):');if(!why||!why.trim())return;const s=db.stock[key(x.item)];
+if(t==='purchases'){if(s){if(s.balance<x.qty)return alert('Cannot delete: stock already used. Available '+s.balance+', purchase qty '+x.qty+'.');s.balance-=x.qty}}
+else if(x.status==='Issued'&&s)s.balance+=x.qty;
+db[t]=db[t].filter(y=>y!==x);log('Deleted '+t.slice(0,-1),x.item+' qty '+x.qty+' - '+why.trim());save()}
+function renderAudit(){$('auditTable').innerHTML=(db.audit||[]).length?`<table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead><tbody>${db.audit.slice(0,200).map(a=>`<tr><td>${esc(a.t)}</td><td>${esc(a.u)}</td><td>${esc(a.a)}</td><td>${esc(a.d)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No activity yet.</div>'}
+function renderChecks(){if(!isStaff())return;const n=[...db.purchases,...db.requests].filter(x=>!x.check||x.check==='Unchecked').length;if(n)$('alerts').insertAdjacentHTML('beforeend',`<div class="notice"><b>Supervisor:</b> ${n} entr${n>1?'ies are':'y is'} waiting to be checked.</div>`)}
+window.addEventListener('beforeprint',()=>{$('printhead').innerHTML=$('reports').classList.contains('active')?'':`<b>${esc(org())}</b> &mdash; ${esc((document.querySelector('nav button.active')||{textContent:''}).textContent.trim())} &middot; Printed ${new Date().toLocaleString()} by ${esc(me?me.name:'')}`});
+function renderUsers(){if(!isAdmin())return;loadUsers();const p=users.filter(u=>u.status==='pending');$('pendCount').textContent=p.length?' ('+p.length+')':'';
+const btn=(u,a,t,c)=>`<button class="${c||'secondary'}" data-u="${u}" data-a="${a}">${t}</button>`;
+const sel=u=>`<select data-u="${u.username}" data-r="1" style="max-width:130px">${['user','supervisor','admin'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${r}</option>`).join('')}</select>`;
+const row=u=>{const main=u.username==='admin';return `<tr><td><b>${esc(u.username)}</b><br>${esc(u.name)}</td><td>${esc(u.dept||'')}<br>${esc(u.contact||'')}</td><td>${esc(u.created)}</td><td>${main?'admin':sel(u)}</td><td><span class="pill ${u.status==='approved'?'ok':u.status==='pending'?'pending':'low'}">${u.status}</span></td><td><div class="actions">${main?btn(u.username,'pw','Change password'):(u.status!=='approved'?btn(u.username,'approved','Approve','primary'):'')+(u.status!=='rejected'?btn(u.username,'rejected',u.status==='pending'?'Reject':'Block'):'')+btn(u.username,'pw','Reset password')+btn(u.username,'del','Delete','danger')}</div></td></tr>`};
+const tbl=a=>a.length?`<table><thead><tr><th>User</th><th>Department / Contact</th><th>Requested</th><th>Access level</th><th>Status</th><th>Action</th></tr></thead><tbody>${a.map(row).join('')}</tbody></table>`:'<div class="empty">None.</div>';
+$('pendTable').innerHTML=tbl(p);$('userTable').innerHTML=tbl(users.filter(u=>u.status!=='pending'))}
+$('users').onclick=e=>{const b=e.target.closest('[data-a]');if(b)userAct(b.dataset.u,b.dataset.a)};
+$('users').onchange=e=>{const s=e.target.closest('select[data-r]');if(s)userAct(s.dataset.u,'role',s.value)};
+async function userAct(un,a,val){if(!isAdmin())return;loadUsers();const u=users.find(x=>x.username===un);if(!u)return;const self=un===me.username||un==='admin';
+if(a==='pw'){const p=prompt('New password for '+un+' (min 6 characters):');if(!p)return;if(p.length<6)return alert('Too short.');u.pass=await hash(p);alert('Password updated.')}
+else if(a==='del'){if(self||!confirm('Delete user '+un+'?'))return;users=users.filter(x=>x!==u)}
+else if(a==='role'){if(u.status!=='approved')return;if(self){alert('You cannot change your own access level.');renderUsers();return}u.role=val}
+else if(a==='approved'){const s=document.querySelector('select[data-u="'+un+'"]');if(s)u.role=s.value;u.status='approved'}
+else if(!self)u.status=a;
+saveUsers();renderUsers()}
+initUsers();
+$('rDate').value=$('pDate').value=today();$('reportMonth').value=today().slice(0,7);renderAll();
+</script></body></html>
